@@ -35,14 +35,20 @@ env/
 *.swp
 *.swo
 
-# Logs
-*.log
-app.log
-
-# Database
-*.db
-*.sqlite3
-
 # OS
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker
+docker-compose.override.yml
+
+# Cache
+.cache/
