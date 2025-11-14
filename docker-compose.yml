@@ -3,35 +3,42 @@ version: '3.8'
 services:
   app:
     build: .
+    container_name: telegram_sms_bot
+    restart: unless-stopped
     ports:
       - "8000:8000"
     env_file:
       - .env
     depends_on:
-      - postgres
+      - db
       - redis
-    restart: unless-stopped
     volumes:
-      - ./app.log:/app/app.log
+      - ./app:/app/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-  postgres:
-    image: postgres:16-alpine
+  db:
+    image: postgres:15-alpine
+    container_name: telegram_bot_db
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: telegram_sms_bot
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: botuser
+      POSTGRES_PASSWORD: botpassword
+      POSTGRES_DB: telegram_bot
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./migrations/init.sql:/docker-entrypoint-initdb.d/init.sql
-    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
+    container_name: telegram_bot_redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
-    restart: unless-stopped
+    volumes:
+      - redis_data:/data
 
 volumes:
   postgres_data:
+  redis_data:
