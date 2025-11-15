@@ -2,32 +2,32 @@ from pydantic_settings import BaseSettings
 from typing import Optional
 
 class Settings(BaseSettings):
-    # Telegram
+    # Telegram (REQUIRED)
     TELEGRAM_BOT_TOKEN: str
     TELEGRAM_WEBHOOK_URL: str
 
-    # Database
-    DATABASE_URL: str
-    SUPABASE_PROJECT_REF: str = "lnmndaxsjhmfldzuiwqk"
+    # Database (with SQLite fallback)
+    DATABASE_URL: str = "sqlite:///./bot.db"
+    SUPABASE_PROJECT_REF: Optional[str] = None
 
-    # PixIntegra
-    PIXINTEGRA_API_TOKEN: str
-    PIXINTEGRA_WEBHOOK_SECRET: str
+    # PixIntegra (OPTIONAL - only needed if using PIX payments)
+    PIXINTEGRA_API_TOKEN: Optional[str] = None
+    PIXINTEGRA_WEBHOOK_SECRET: Optional[str] = None
     PIXINTEGRA_BASE_URL: str = "https://api.pixintegra.com.br/v1"
 
-    # SMS-Activate
-    SMSACTIVATE_API_KEY: str
+    # SMS-Activate (OPTIONAL - only needed if selling SMS)
+    SMSACTIVATE_API_KEY: Optional[str] = None
     SMSACTIVATE_BASE_URL: str = "https://api.sms-activate.org/stubs/handler_api.php"
 
-    # Apex Seguidores
-    APEX_API_KEY: str
+    # Apex Seguidores (OPTIONAL - only needed if selling followers)
+    APEX_API_KEY: Optional[str] = None
     APEX_BASE_URL: str = "https://apexseguidores.com/api/v2"
 
-    # Security
-    JWT_SECRET_KEY: str
-    WEBHOOK_HMAC_SECRET: str
+    # Security (with defaults for development)
+    JWT_SECRET_KEY: str = "dev-secret-key-change-in-production-min-32-chars"
+    WEBHOOK_HMAC_SECRET: str = "dev-hmac-secret-change-in-production"
 
-    # Redis
+    # Redis (OPTIONAL)
     REDIS_URL: Optional[str] = None
 
     # Environment
