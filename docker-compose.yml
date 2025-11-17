@@ -1,43 +1,80 @@
 version: '3.8'
 
 services:
-  app:
+  # Aplicação FastAPI
+  api:
     build: .
-    container_name: telegram_sms_bot
+    container_name: telegram_sms_bot_api
     restart: unless-stopped
     ports:
       - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/telegram_bot
+      - REDIS_URL=redis://redis:6379/0
     env_file:
       - .env
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - bot_network
     volumes:
       - ./app:/app/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
+  # PostgreSQL
   db:
     image: postgres:15-alpine
-    container_name: telegram_bot_db
+    container_name: telegram_sms_bot_db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: botuser
-      POSTGRES_PASSWORD: botpassword
       POSTGRES_DB: telegram_bot
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./migrations/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bot_network
 
+  # Redis
   redis:
     image: redis:7-alpine
-    container_name: telegram_bot_redis
+    container_name: telegram_sms_bot_redis
     restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - bot_network
+
+  # PgAdmin (opcional - para gerenciar banco)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: telegram_sms_bot_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    networks:
+      - bot_network
+
+networks:
+  bot_network:
+    driver: bridge
 
 volumes:
   postgres_data:
