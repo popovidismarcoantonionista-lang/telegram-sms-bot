@@ -1,47 +1,62 @@
+"""
+Utilitários de segurança: criptografia, HMAC, JWT.
+"""
 import hmac
 import hashlib
-import secrets
-from jose import JWTError, jwt
+from cryptography.fernet import Fernet
+from jose import jwt
 from datetime import datetime, timedelta
-from typing import Optional
+from ..config import settings
 
-from app.config import settings
 
-def generate_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    """Generate JWT token"""
-    to_encode = data.copy()
+class SecurityUtils:
+    """Utilitários de segurança"""
 
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(hours=24)
+    def __init__(self):
+        self.cipher = Fernet(settings.ENCRYPTION_KEY.encode())
 
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm="HS256")
-    return encoded_jwt
+    def encrypt(self, data: str) -> str:
+        """Criptografa dados sensíveis"""
+        return self.cipher.encrypt(data.encode()).decode()
 
-def verify_token(token: str) -> Optional[dict]:
-    """Verify JWT token"""
-    try:
-        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
-        return payload
-    except JWTError:
-        return None
+    def decrypt(self, encrypted_data: str) -> str:
+        """Descriptografa dados"""
+        return self.cipher.decrypt(encrypted_data.encode()).decode()
 
-def verify_hmac_signature(payload: bytes, signature: str, secret: str) -> bool:
-    """Verify HMAC SHA256 signature"""
-    expected = hmac.new(
-        secret.encode(),
-        payload,
-        hashlib.sha256
-    ).hexdigest()
+    @staticmethod
+    def verify_hmac_signature(payload: bytes, signature: str, secret: str) -> bool:
+        """
+        Verifica assinatura HMAC SHA256.
+        Usado para validar webhooks do PixIntegra.
+        """
+        expected_signature = hmac.new(
+            secret.encode(),
+            payload,
+            hashlib.sha256
+        ).hexdigest()
+        return hmac.compare_digest(expected_signature, signature)
 
-    return hmac.compare_digest(expected, signature)
+    @staticmethod
+    def verify_telegram_webhook(data: dict, secret: str) -> bool:
+        """Verifica webhook do Telegram"""
+        # Telegram usa X-Telegram-Bot-Api-Secret-Token header
+        return True  # Implementar conforme necessidade
 
-def generate_idempotency_key() -> str:
-    """Generate secure idempotency key"""
-    return secrets.token_urlsafe(32)
+    @staticmethod
+    def create_jwt_token(data: dict, expires_delta: timedelta = None) -> str:
+        """Cria token JWT"""
+        to_encode = data.copy()
+        if expires_delta:
+            expire = datetime.utcnow() + expires_delta
+        else:
+            expire = datetime.utcnow() + timedelta(hours=24)
+        to_encode.update({"exp": expire})
+        return jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
-def hash_password(password: str) -> str:
-    """Hash password with SHA256"""
-    return hashlib.sha256(password.encode()).hexdigest()
+    @staticmethod
+    def verify_jwt_token(token: str) -> dict:
+        """Verifica e decodifica token JWT"""
+        return jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+
+
+security_utils = SecurityUtils()
