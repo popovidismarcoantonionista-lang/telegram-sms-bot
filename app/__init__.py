@@ -1,1 +1,0 @@
-"""Telegram SMS Bot Application"""
